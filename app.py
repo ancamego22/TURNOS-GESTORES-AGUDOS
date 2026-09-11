@@ -20,7 +20,6 @@ st.set_page_config(page_title="Sistema Integral de Turnos - Salud en Casa SURA",
 # -------------------------------------------------------------
 st.markdown("""
     <style>
-    /* Color principal de botones y acentos */
     .stButton>button {
         background-color: #003366;
         color: white;
@@ -32,13 +31,8 @@ st.markdown("""
         background-color: #002244;
         color: white;
     }
-    /* Estilos de títulos */
     h1, h2, h3 {
         color: #003366 !important;
-    }
-    /* Contenedores con borde fino */
-    div.st-emotion-cache-1r6slb0 {
-        border-color: #003366 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -131,18 +125,17 @@ if st.session_state.df_c20 is None and os.path.exists(PATH_CUADRO_ACTUAL):
         pass
 
 nombres_emp = []
-df_p_global = None
 if os.path.exists(PATH_PERSONAL):
     try:
-        xls_p = pd.ExcelFile(PATH_PERSONAL)
-        hoja_a_leer = 'PERSONAL ' if 'PERSONAL ' in xls_p.sheet_names else xls_p.sheet_names[0]
-        df_p_global = pd.read_excel(PATH_PERSONAL, sheet_name=hoja_a_leer)
-        
-        df_p_global.columns = [str(c).strip() for c in df_p_global.iloc[0].values]
-        df_p_global = df_p_global.iloc[1:].dropna(subset=['EMPLEADO'])
-        nombres_emp = sorted(df_p_global['EMPLEADO'].astype(str).str.strip().unique().tolist())
-    except Exception as e:
-        st.error(f"Error leyendo el catálogo de personal: {e}")
+        xls_p_init = pd.ExcelFile(PATH_PERSONAL)
+        hoja_init = 'PERSONAL ' if 'PERSONAL ' in xls_p_init.sheet_names else xls_p_init.sheet_names[0]
+        df_p_global_init = pd.read_excel(PATH_PERSONAL, sheet_name=hoja_init)
+        df_p_global_init.columns = [str(c).strip() for c in df_p_global_init.iloc[0].values]
+        df_p_global_init = df_p_global_init.iloc[1:].dropna(subset=['EMPLEADO'])
+        nombres_emp = sorted(df_p_global_init['EMPLEADO'].astype(str).str.strip().unique().tolist())
+    except Exception:
+        pass
+
 # -------------------------------------------------------------
 # 2. BARRA LATERAL: SELECCIÓN DE PERFIL (EMPLEADO VS ADMIN SEGURO)
 # -------------------------------------------------------------
@@ -332,7 +325,7 @@ with st.container(border=True):
                 
                 if tipo_sol == "Vacaciones":
                     d_h = contar_dias_habiles_vacaciones(d_desde, d_hasta)
-                    reg_vac = st.session_state.vacaciones_db.get(emp_sol, {"disfrutados": 0, "total_ley": 15})
+                    reg_vac = st.session_state.vacaciones_db.get(emp_sol, {"acumulados_iniciales": 15, "disfrutados": 0})
                     reg_vac["disfrutados"] += d_h
                     st.session_state.vacaciones_db[emp_sol] = reg_vac
                     guardar_json(PATH_VACACIONES, st.session_state.vacaciones_db)
@@ -569,8 +562,14 @@ with c_gen2:
 
 if btn_gen or btn_prox:
     if os.path.exists(PATH_PERSONAL) and os.path.exists(PATH_HISTORIAL):
-        with st.spinner("Resolviendo optimización matemática y limpiando novedades..."):
+        with st.spinner("Leyendo archivos y resolviendo optimización matemática..."):
             try:
+                xls_p_check = pd.ExcelFile(PATH_PERSONAL)
+                hoja_p = 'PERSONAL ' if 'PERSONAL ' in xls_p_check.sheet_names else xls_p_check.sheet_names[0]
+                df_p_local = pd.read_excel(PATH_PERSONAL, sheet_name=hoja_p)
+                df_p_local.columns = [str(c).strip() for c in df_p_local.iloc[0].values]
+                df_p_local = df_p_local.iloc[1:].dropna(subset=['EMPLEADO'])
+
                 history = {}
                 filtro_ciclo_meta = "Ciclos Actuales (20 y 21)"
                 if btn_prox and st.session_state.df_c21 is not None:
@@ -596,7 +595,7 @@ if btn_gen or btn_prox:
                             }
 
                 solver, x, employees, dias_28, SHIFTS, status = ejecutar_optimizador(
-                    df_p_global, history, fecha_inicio, st.session_state.novedades_list, filtrar_ciclo=filtro_ciclo_meta
+                    df_p_local, history, fecha_inicio, st.session_state.novedades_list, filtrar_ciclo=filtro_ciclo_meta
                 )
 
                 if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
@@ -804,7 +803,7 @@ if st.session_state.df_c20 is not None:
 
         if st.button("💾 Guardar Salarios de Forma Permanente"):
             nuevo_dict = {r_s['EMPLEADO']: float(r_s['SALARIO BÁSICO MENSUAL']) for _, r_s in sal_editado.iterrows()}
-            guardar_salarios(nuevo_dict)
+            guardar_json(PATH_SALARIOS, nuevo_dict)
             st.session_state.salarios = nuevo_dict
             registrar_auditoria("Actualización Salarial", "Se actualizaron los salarios básicos.", responsable_activo)
             st.success("¡Salarios guardados!")
