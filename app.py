@@ -198,7 +198,7 @@ with st.sidebar:
             st.header("⚙️ Parámetros")
             fecha_inicio = st.date_input("Lunes Inicio de Ciclo", datetime.date(2026, 9, 21))
 
-# Función reutilizable para generar la Tarjeta Corporativa con Logo Incrustado
+# Función reutilizable para generar la Tarjeta Corporativa con Logo, Horas y Descansos
 def generar_tarjeta_calendario(emp_nombre, rol_nombre, c20_cols, c21_cols, r20_vals, r21_vals):
     fig, ax = plt.subplots(figsize=(14, 9))
     ax.axis('off')
@@ -221,29 +221,38 @@ def generar_tarjeta_calendario(emp_nombre, rol_nombre, c20_cols, c21_cols, r20_v
         except Exception:
             pass
 
+    # Cálculo de métricas para la tarjeta
+    all_vals_calc = r20_vals + r21_vals
+    total_horas = sum(SHIFT_HOURS.get(s, 0) for s in all_vals_calc)
+    total_descansos = sum(1 for s in all_vals_calc if s == "D")
+    total_extendidos = sum(1 for s in all_vals_calc if s in ["T1E", "T2E"])
+
     ax.text(0.03, 0.73, f"Colaborador: {emp_nombre}", fontsize=13, fontweight='bold', color='#003366')
-    ax.text(0.03, 0.68, f"Rol: {rol_nombre[:60]}", fontsize=9, color='#555555')
+    ax.text(0.03, 0.68, f"Rol: {rol_nombre[:55]}", fontsize=9, color='#555555')
     
+    # Badge con Resumen Operativo (Horas y Descansos)
+    resumen_text = f"⏱️ Total Horas: {total_horas}h   |   🌴 Días de Descanso (D): {total_descansos}   |   ⭐ Turnos Extendidos: {total_extendidos}"
+    ax.text(0.03, 0.62, resumen_text, fontsize=9, fontweight='bold', color='#1F497D', bbox=dict(boxstyle="round,pad=0.3", facecolor="#E9ECEF", edgecolor="#003366", linewidth=0.8))
+
     colors_map = {
         "T1": "#D1ECF1", "T1E": "#99CCFF", "T2": "#FFE8D6", "T2E": "#FFCC80",
         "T3": "#F8D7DA", "T4": "#FFF3CD", "D": "#D4EDDA", "INC": "#F5C6CB", "V": "#B2EBF2", "CAL": "#E1BEE7"
     }
     
     all_cols = c20_cols + c21_cols
-    all_vals = r20_vals + r21_vals
     
-    for i, (d_txt, s_val) in enumerate(zip(all_cols, all_vals)):
+    for i, (d_txt, s_val) in enumerate(zip(all_cols, all_vals_calc)):
         row = i // 7
         col = i % 7
         x = 0.03 + col * 0.138
-        y = 0.49 - row * 0.16
+        y = 0.46 - row * 0.155
         bg_col = colors_map.get(s_val, "#FFFFFF")
         
-        box = patches.FancyBboxPatch((x, y), 0.13, 0.13, boxstyle="round,pad=0.02", facecolor=bg_col, edgecolor="#003366", linewidth=1.2, zorder=2)
+        box = patches.FancyBboxPatch((x, y), 0.13, 0.125, boxstyle="round,pad=0.02", facecolor=bg_col, edgecolor="#003366", linewidth=1.2, zorder=2)
         ax.add_patch(box)
         
-        ax.text(x + 0.065, y + 0.09, d_txt, fontsize=9, fontweight='bold', ha='center', color="#333333", zorder=3)
-        ax.text(x + 0.065, y + 0.04, s_val, fontsize=14, fontweight='bold', ha='center', color="#111111", zorder=3)
+        ax.text(x + 0.065, y + 0.085, d_txt, fontsize=9, fontweight='bold', ha='center', color="#333333", zorder=3)
+        ax.text(x + 0.065, y + 0.035, s_val, fontsize=14, fontweight='bold', ha='center', color="#111111", zorder=3)
 
     buf_img = io.BytesIO()
     plt.savefig(buf_img, format='png', bbox_inches='tight', dpi=200)
@@ -286,7 +295,7 @@ if perfil_ingreso == "📅 Portal de Empleados (Público)":
             img_bytes = generar_tarjeta_calendario(emp_portal, r20['ROL'], c20_cols, c21_cols, r20_vals, r21_vals)
             
             st.download_button(
-                label=f"⬇️ Descargar Tarjeta Corporativa con Logo SURA (PNG)",
+                label=f"⬇️ Descargar Tarjeta Corporativa con Horas y Descansos (PNG)",
                 data=img_bytes,
                 file_name=f"Calendario_SaludEnCasa_SURA_{emp_portal.replace(' ', '_')}.png",
                 mime="image/png"
@@ -427,8 +436,6 @@ def ejecutar_optimizador(df_p, history, fecha_inicio_dt, novedades, filtrar_cicl
                 if "desde" in nov:
                     curr_dt = nov["desde"]
                     while curr_dt <= nov["hasta"]:
-                        # CORRECCIÓN CRÍTICA: Se eliminó el filtro de festivos/domingos para que 
-                        # las vacaciones cubran de forma continua todos los días del rango (incluyendo domingos).
                         for d_idx, dt_curr in enumerate(dias_28):
                             if dt_curr.date() == curr_dt:
                                 dias_bloqueados[d_idx] = nov["tipo"]
