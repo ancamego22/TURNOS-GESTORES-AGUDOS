@@ -5,3 +5,4 @@ ortools
 openpyxl
 matplotlib
 pillow
+xlrd
