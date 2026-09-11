@@ -133,8 +133,12 @@ if st.session_state.df_c20 is None and os.path.exists(PATH_CUADRO_ACTUAL):
 nombres_emp = []
 df_p_global = None
 if os.path.exists(PATH_PERSONAL):
-    try:
-        df_p_global = pd.read_excel(PATH_PERSONAL, sheet_name='PERSONAL ')
+   try:
+        try:
+            df_p_global = pd.read_excel(PATH_PERSONAL, sheet_name='PERSONAL ')
+        except Exception:
+            df_p_global = pd.read_excel(PATH_PERSONAL, sheet_name=0)
+
         df_p_global.columns = [str(c).strip() for c in df_p_global.iloc[0].values]
         df_p_global = df_p_global.iloc[1:].dropna(subset=['EMPLEADO'])
         nombres_emp = sorted(df_p_global['EMPLEADO'].astype(str).str.strip().unique().tolist())
