@@ -212,7 +212,6 @@ def generar_tarjeta_calendario(emp_nombre, rol_nombre, c20_cols, c21_cols, r20_v
     ax.text(0.03, 0.93, "SALUD EN CASA — SURA", fontsize=16, fontweight='bold', color='white', zorder=2)
     ax.text(0.03, 0.86, "CRONOGRAMA PERSONAL DE TURNOS | Ciclos 20 y 21", fontsize=10, color='#B0C4DE', zorder=2)
     
-    # Insertar el logo oficial en la esquina superior derecha del banner si existe
     if os.path.exists(PATH_LOGO):
         try:
             img_logo = Image.open(PATH_LOGO)
@@ -428,10 +427,11 @@ def ejecutar_optimizador(df_p, history, fecha_inicio_dt, novedades, filtrar_cicl
                 if "desde" in nov:
                     curr_dt = nov["desde"]
                     while curr_dt <= nov["hasta"]:
-                        if not is_festivo_or_domingo(curr_dt):
-                            for d_idx, dt_curr in enumerate(dias_28):
-                                if dt_curr.date() == curr_dt:
-                                    dias_bloqueados[d_idx] = nov["tipo"]
+                        # CORRECCIÓN CRÍTICA: Se eliminó el filtro de festivos/domingos para que 
+                        # las vacaciones cubran de forma continua todos los días del rango (incluyendo domingos).
+                        for d_idx, dt_curr in enumerate(dias_28):
+                            if dt_curr.date() == curr_dt:
+                                dias_bloqueados[d_idx] = nov["tipo"]
                         curr_dt += datetime.timedelta(days=1)
                 else:
                     tiene_pref = nov["tipo"]
