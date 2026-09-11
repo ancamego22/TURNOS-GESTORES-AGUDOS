@@ -738,7 +738,8 @@ if st.session_state.df_c20 is not None:
 
             reg_v = vac_db.get(emp, {"acumulados_iniciales": 15, "disfrutados": 0})
             disf = reg_v["disfrutados"]
-            pend = max(0, reg_v["total_ley"] - disf)
+            ac_ini = reg_v.get("acumulados_iniciales", 15)
+            pend = max(0, ac_ini - disf)
             val_vac = (sal_base / 30) * disf if sal_base > 0 else 0
 
             filas.append({
