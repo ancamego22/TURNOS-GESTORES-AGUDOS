@@ -1,0 +1,7 @@
+streamlit
+pandas
+numpy
+ortools
+openpyxl
+matplotlib
+pillow
