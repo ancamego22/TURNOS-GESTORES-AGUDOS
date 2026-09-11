@@ -134,16 +134,15 @@ nombres_emp = []
 df_p_global = None
 if os.path.exists(PATH_PERSONAL):
     try:
-        try:
-            df_p_global = pd.read_excel(PATH_PERSONAL, sheet_name='PERSONAL ')
-        except Exception:
-            df_p_global = pd.read_excel(PATH_PERSONAL, sheet_name=0)
-            
+        xls_p = pd.ExcelFile(PATH_PERSONAL)
+        hoja_a_leer = 'PERSONAL ' if 'PERSONAL ' in xls_p.sheet_names else xls_p.sheet_names[0]
+        df_p_global = pd.read_excel(PATH_PERSONAL, sheet_name=hoja_a_leer)
+        
         df_p_global.columns = [str(c).strip() for c in df_p_global.iloc[0].values]
         df_p_global = df_p_global.iloc[1:].dropna(subset=['EMPLEADO'])
         nombres_emp = sorted(df_p_global['EMPLEADO'].astype(str).str.strip().unique().tolist())
-    except Exception:
-        pass
+    except Exception as e:
+        st.error(f"Error leyendo el catálogo de personal: {e}")
 # -------------------------------------------------------------
 # 2. BARRA LATERAL: SELECCIÓN DE PERFIL (EMPLEADO VS ADMIN SEGURO)
 # -------------------------------------------------------------
