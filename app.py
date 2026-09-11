@@ -198,6 +198,60 @@ with st.sidebar:
             st.header("⚙️ Parámetros")
             fecha_inicio = st.date_input("Lunes Inicio de Ciclo", datetime.date(2026, 9, 21))
 
+# Función reutilizable para generar la Tarjeta Corporativa con Logo Incrustado
+def generar_tarjeta_calendario(emp_nombre, rol_nombre, c20_cols, c21_cols, r20_vals, r21_vals):
+    fig, ax = plt.subplots(figsize=(14, 9))
+    ax.axis('off')
+    
+    bg = patches.Rectangle((0, 0), 1, 1, transform=ax.transAxes, facecolor='#F8F9FA', edgecolor='#003366', linewidth=2, zorder=0)
+    ax.add_patch(bg)
+    
+    banner = patches.Rectangle((0, 0.82), 1, 0.18, transform=ax.transAxes, facecolor='#003366', zorder=1)
+    ax.add_patch(banner)
+    
+    ax.text(0.03, 0.93, "SALUD EN CASA — SURA", fontsize=16, fontweight='bold', color='white', zorder=2)
+    ax.text(0.03, 0.86, "CRONOGRAMA PERSONAL DE TURNOS | Ciclos 20 y 21", fontsize=10, color='#B0C4DE', zorder=2)
+    
+    # Insertar el logo oficial en la esquina superior derecha del banner si existe
+    if os.path.exists(PATH_LOGO):
+        try:
+            img_logo = Image.open(PATH_LOGO)
+            ax_logo = fig.add_axes([0.72, 0.83, 0.25, 0.15])
+            ax_logo.imshow(img_logo)
+            ax_logo.axis('off')
+        except Exception:
+            pass
+
+    ax.text(0.03, 0.73, f"Colaborador: {emp_nombre}", fontsize=13, fontweight='bold', color='#003366')
+    ax.text(0.03, 0.68, f"Rol: {rol_nombre[:60]}", fontsize=9, color='#555555')
+    
+    colors_map = {
+        "T1": "#D1ECF1", "T1E": "#99CCFF", "T2": "#FFE8D6", "T2E": "#FFCC80",
+        "T3": "#F8D7DA", "T4": "#FFF3CD", "D": "#D4EDDA", "INC": "#F5C6CB", "V": "#B2EBF2", "CAL": "#E1BEE7"
+    }
+    
+    all_cols = c20_cols + c21_cols
+    all_vals = r20_vals + r21_vals
+    
+    for i, (d_txt, s_val) in enumerate(zip(all_cols, all_vals)):
+        row = i // 7
+        col = i % 7
+        x = 0.03 + col * 0.138
+        y = 0.49 - row * 0.16
+        bg_col = colors_map.get(s_val, "#FFFFFF")
+        
+        box = patches.FancyBboxPatch((x, y), 0.13, 0.13, boxstyle="round,pad=0.02", facecolor=bg_col, edgecolor="#003366", linewidth=1.2, zorder=2)
+        ax.add_patch(box)
+        
+        ax.text(x + 0.065, y + 0.09, d_txt, fontsize=9, fontweight='bold', ha='center', color="#333333", zorder=3)
+        ax.text(x + 0.065, y + 0.04, s_val, fontsize=14, fontweight='bold', ha='center', color="#111111", zorder=3)
+
+    buf_img = io.BytesIO()
+    plt.savefig(buf_img, format='png', bbox_inches='tight', dpi=200)
+    buf_img.seek(0)
+    plt.close()
+    return buf_img.getvalue()
+
 # -------------------------------------------------------------
 # VISTA 1: PORTAL DE AUTOGESTIÓN PARA EMPLEADOS (PÚBLICO)
 # -------------------------------------------------------------
@@ -228,57 +282,13 @@ if perfil_ingreso == "📅 Portal de Empleados (Público)":
             })
             st.dataframe(df_portal_view, use_container_width=True)
             
-            fig, ax = plt.subplots(figsize=(14, 6))
-            ax.axis('off')
-            
-            bg = patches.Rectangle((0, 0), 1, 1, transform=ax.transAxes, facecolor='#F8F9FA', edgecolor='#003366', linewidth=2, zorder=0)
-            ax.add_patch(bg)
-            
-            banner = patches.Rectangle((0, 0.80), 1, 0.20, transform=ax.transAxes, facecolor='#003366', zorder=1)
-            ax.add_patch(banner)
-            
-            ax.text(0.03, 0.92, "SALUD EN CASA — SURA", fontsize=15, fontweight='bold', color='white', zorder=2)
-            ax.text(0.03, 0.85, f"CRONOGRAMA PERSONAL DE TURNOS | Ciclos 20 y 21", fontsize=10, color='#B0C4DE', zorder=2)
-            
-            if os.path.exists(PATH_LOGO):
-                try:
-                    img_logo = plt.imread(PATH_LOGO)
-                    fig.figimage(img_logo, xo=900, yo=480, zorder=3, origin='upper')
-                except Exception:
-                    pass
-
-            ax.text(0.03, 0.70, f"Colaborador: {emp_portal}", fontsize=12, fontweight='bold', color='#003366')
-            ax.text(0.03, 0.65, f"Rol: {r20['ROL'][:50]}", fontsize=9, color='#555555')
-            
-            colors_map = {
-                "T1": "#D1ECF1", "T1E": "#99CCFF", "T2": "#FFE8D6", "T2E": "#FFCC80",
-                "T3": "#F8D7DA", "T4": "#FFF3CD", "D": "#D4EDDA", "INC": "#F5C6CB", "V": "#B2EBF2", "CAL": "#E1BEE7"
-            }
-            
-            all_cols = c20_cols + c21_cols
-            all_vals = [r20[c] for c in c20_cols] + [r21[c] for c in c21_cols]
-            
-            for i, (d_txt, s_val) in enumerate(zip(all_cols, all_vals)):
-                row = i // 7
-                col = i % 7
-                x = 0.03 + col * 0.138
-                y = 0.35 - row * 0.28
-                bg_col = colors_map.get(s_val, "#FFFFFF")
-                
-                box = patches.FancyBboxPatch((x, y), 0.13, 0.22, boxstyle="round,pad=0.02", facecolor=bg_col, edgecolor="#003366", linewidth=1.2, zorder=2)
-                ax.add_patch(box)
-                
-                ax.text(x + 0.065, y + 0.15, d_txt, fontsize=9, fontweight='bold', ha='center', color="#333333", zorder=3)
-                ax.text(x + 0.065, y + 0.07, s_val, fontsize=15, fontweight='bold', ha='center', color="#111111", zorder=3)
-
-            buf_img = io.BytesIO()
-            plt.savefig(buf_img, format='png', bbox_inches='tight', dpi=200)
-            buf_img.seek(0)
-            plt.close()
+            r20_vals = [r20[c] for c in c20_cols]
+            r21_vals = [r21[c] for c in c21_cols]
+            img_bytes = generar_tarjeta_calendario(emp_portal, r20['ROL'], c20_cols, c21_cols, r20_vals, r21_vals)
             
             st.download_button(
-                label=f"⬇️ Descargar Tarjeta de Calendario Corporativa (PNG)",
-                data=buf_img.getvalue(),
+                label=f"⬇️ Descargar Tarjeta Corporativa con Logo SURA (PNG)",
+                data=img_bytes,
                 file_name=f"Calendario_SaludEnCasa_SURA_{emp_portal.replace(' ', '_')}.png",
                 mime="image/png"
             )
@@ -884,50 +894,13 @@ if st.session_state.df_c20 is not None:
             })
             st.dataframe(df_cal_emp, use_container_width=True)
             
-            fig, ax = plt.subplots(figsize=(14, 6))
-            ax.axis('off')
-            
-            bg = patches.Rectangle((0, 0), 1, 1, transform=ax.transAxes, facecolor='#F8F9FA', edgecolor='#003366', linewidth=2, zorder=0)
-            ax.add_patch(bg)
-            
-            banner = patches.Rectangle((0, 0.82), 1, 0.18, transform=ax.transAxes, facecolor='#003366', zorder=1)
-            ax.add_patch(banner)
-            
-            ax.text(0.03, 0.92, "SURA — Gestión de Turnos Operativos", fontsize=14, fontweight='bold', color='white', zorder=2)
-            ax.text(0.03, 0.86, f"CRONOGRAMA PERSONAL DE TURNOS | Ciclos 20 y 21", fontsize=10, color='#B0C4DE', zorder=2)
-            
-            ax.text(0.03, 0.73, f"Colaborador: {emp_cal}", fontsize=12, fontweight='bold', color='#003366')
-            ax.text(0.03, 0.68, f"Rol: {r20['ROL'][:50]}", fontsize=9, color='#555555')
-            
-            colors_map = {
-                "T1": "#D1ECF1", "T1E": "#99CCFF", "T2": "#FFE8D6", "T2E": "#FFCC80",
-                "T3": "#F8D7DA", "T4": "#FFF3CD", "D": "#D4EDDA", "INC": "#F5C6CB", "V": "#B2EBF2", "CAL": "#E1BEE7"
-            }
-            
-            all_cols = c20_cols + c21_cols
-            all_vals = [r20[c] for c in c20_cols] + [r21[c] for c in c21_cols]
-            
-            for i, (d_txt, s_val) in enumerate(zip(all_cols, all_vals)):
-                row = i // 7
-                col = i % 7
-                x = 0.03 + col * 0.138
-                y = 0.38 - row * 0.28
-                bg_col = colors_map.get(s_val, "#FFFFFF")
-                
-                box = patches.FancyBboxPatch((x, y), 0.13, 0.22, boxstyle="round,pad=0.02", facecolor=bg_col, edgecolor="#003366", linewidth=1.2, zorder=2)
-                ax.add_patch(box)
-                
-                ax.text(x + 0.065, y + 0.15, d_txt, fontsize=9, fontweight='bold', ha='center', color="#333333", zorder=3)
-                ax.text(x + 0.065, y + 0.07, s_val, fontsize=15, fontweight='bold', ha='center', color="#111111", zorder=3)
-
-            buf_img = io.BytesIO()
-            plt.savefig(buf_img, format='png', bbox_inches='tight', dpi=200)
-            buf_img.seek(0)
-            plt.close()
+            r20_vals = [r20[c] for c in c20_cols]
+            r21_vals = [r21[c] for c in c21_cols]
+            img_bytes = generar_tarjeta_calendario(emp_cal, r20['ROL'], c20_cols, c21_cols, r20_vals, r21_vals)
             
             st.download_button(
                 label=f"⬇️ Descargar Tarjeta de Calendario de {emp_cal[:15]} (Imagen PNG con Logo SURA)",
-                data=buf_img.getvalue(),
+                data=img_bytes,
                 file_name=f"Calendario_SURA_{emp_cal.replace(' ', '_')}.png",
                 mime="image/png"
             )
